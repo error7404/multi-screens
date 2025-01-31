@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Side-by-Side Website Demo with Sync Toggle</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        iframe {
+            width: 50%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Divider between iframes */
+        .divider {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #ccc;
+            z-index: 100;
+        }
+
+        #sync-toggle {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        #sync-toggle:active {
+            background-color: #0056b3;
+        }
+
+        /* Fake mouse cursor */
+        #fake-mouse {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: red;
+            border: 1.5px black solid;
+            border-radius: 50%;
+            pointer-events: none;
+            /* Ensure it doesn't interfere with clicks */
+            z-index: 9999;
+            display: none;
+            /* Hidden by default */
+        }
+    </style>
+</head>
+
+<body>
+    <button id="sync-toggle">Sync: On</button>
+    <div class="container">
+        <iframe id="old" src="http://tickntrip-dev.amiltone.com"></iframe>
+        <div class="divider"></div>
+        <iframe id="new" src="http://tickntrip-staging.amiltone.com"></iframe>
+    </div>
+
+    <!-- Fake mouse cursor -->
+    <div id="fake-mouse"></div>
+
+    <script>
+        const oldFrame = document.getElementById('old');
+        const newFrame = document.getElementById('new');
+        const syncToggle = document.getElementById('sync-toggle');
+        const fakeMouse = document.getElementById('fake-mouse');
+
+        // Variable to track sync state
+        let isSyncEnabled = true;
+
+        // Wait for both iframes to load
+        let framesLoaded = 0;
+        const init = () => {
+            framesLoaded++;
+            if (framesLoaded !== 2) return;
+
+            // Get the bounding rectangles of both frames
+            const oldRect = oldFrame.getBoundingClientRect();
+            const newRect = newFrame.getBoundingClientRect();
+
+            // Sync mouse and clicks from OLD to NEW
+            oldFrame.contentWindow.addEventListener('mousemove', (e) => {
+                if (!isSyncEnabled) return;
+
+                // Calculate mouse position relative to NEW iframe
+                const x = e.clientX - oldRect.left;
+                const y = e.clientY - oldRect.top;
+
+                // Dispatch the event in the NEW iframe
+                const newDoc = newFrame.contentDocument;
+                const element = newDoc.elementFromPoint(x, y);
+                if (element) {
+                    element.dispatchEvent(new MouseEvent('mousemove', {
+                        clientX: x,
+                        clientY: y
+                    }));
+                }
+
+                // Update fake mouse position
+                const newX = newRect.left + x;
+                const newY = newRect.top + y;
+                fakeMouse.style.left = `${newX}px`;
+                fakeMouse.style.top = `${newY}px`;
+                fakeMouse.style.display = 'block'; // Show the fake mouse
+            });
+
+            oldFrame.contentWindow.addEventListener('click', (e) => {
+                if (!isSyncEnabled) return;
+
+                // Calculate click position relative to NEW iframe
+                const x = e.clientX - oldRect.left;
+                const y = e.clientY - oldRect.top;
+
+                // Dispatch the click in the NEW iframe
+                const newDoc = newFrame.contentDocument;
+                const element = newDoc.elementFromPoint(x, y);
+                console.log("sending click to", element);
+                if (element) {
+                    element.click(); // Trigger the click action
+                } else {
+                    console.log("did not find element");
+                }
+            }, true);
+        };
+
+        // Toggle sync on button click
+        syncToggle.addEventListener('click', () => {
+            isSyncEnabled = !isSyncEnabled;
+            syncToggle.textContent = isSyncEnabled ? 'Sync: On' : 'Sync: Off';
+            fakeMouse.style.display = isSyncEnabled ? 'block' : 'none'; // Show/hide fake mouse
+        });
+
+        oldFrame.onload = init;
+        newFrame.onload = init;
+    </script>
+</body>
+
+</html>
