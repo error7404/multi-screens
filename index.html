@@ -74,9 +74,12 @@
 <body>
     <button id="sync-toggle">Sync: On</button>
     <div class="container">
-        <iframe id="old" src="http://tickntrip-dev.amiltone.com"></iframe>
+        <!-- <iframe id="old" src="http://tickntrip-dev.amiltone.com"></iframe> -->
+        <iframe id="old" src="http://localhost:3000"></iframe>
         <div class="divider"></div>
-        <iframe id="new" src="http://tickntrip-staging.amiltone.com"></iframe>
+        <iframe id="new" src="http://tickntrip-dev.amiltone.com"></iframe>
+        <!-- <iframe id="new" src="http://tickntrip-staging.amiltone.com"></iframe> -->
+        <!-- <iframe id="new" src="http://localhost:3000"></iframe> -->
     </div>
 
     <!-- Fake mouse cursor -->
@@ -91,6 +94,15 @@
         // Variable to track sync state
         let isSyncEnabled = true;
 
+        // Function to recalculate iframe positions
+        const recalculatePositions = () => {
+            oldRect = oldFrame.getBoundingClientRect();
+            newRect = newFrame.getBoundingClientRect();
+        };
+
+        // Recalculate positions on window resize
+        window.addEventListener('resize', recalculatePositions);
+
         // Wait for both iframes to load
         let framesLoaded = 0;
         const init = () => {
@@ -98,8 +110,7 @@
             if (framesLoaded !== 2) return;
 
             // Get the bounding rectangles of both frames
-            const oldRect = oldFrame.getBoundingClientRect();
-            const newRect = newFrame.getBoundingClientRect();
+            recalculatePositions();
 
             // Sync mouse and clicks from OLD to NEW
             oldFrame.contentWindow.addEventListener('mousemove', (e) => {
