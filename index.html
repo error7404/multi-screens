@@ -68,10 +68,30 @@
             display: none;
             /* Hidden by default */
         }
+
+        /* Refresh button */
+        #refresh-button {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        #refresh-button:active {
+            background-color: #218838;
+        }
     </style>
 </head>
 
 <body>
+    <button id="refresh-button">Refresh</button>
     <button id="sync-toggle">Sync: On</button>
     <div class="container">
         <!-- <iframe id="old" src="http://tickntrip-dev.amiltone.com"></iframe> -->
@@ -89,10 +109,17 @@
         const oldFrame = document.getElementById('old');
         const newFrame = document.getElementById('new');
         const syncToggle = document.getElementById('sync-toggle');
+        const refreshButton = document.getElementById('refresh-button');
         const fakeMouse = document.getElementById('fake-mouse');
 
         // Variable to track sync state
         let isSyncEnabled = true;
+        let oldRect, newRect;
+
+        // Store references to cleanup later
+        let mouseMoveListener = null;
+        let clickListener = null;
+        let scrollListener = null;
 
         // Function to recalculate iframe positions
         const recalculatePositions = () => {
@@ -100,72 +127,110 @@
             newRect = newFrame.getBoundingClientRect();
         };
 
-        // Recalculate positions on window resize
-        window.addEventListener('resize', recalculatePositions);
+        // Function to setup event listeners
+        const setupListeners = () => {
+            // Remove existing listeners if they exist
+            if (mouseMoveListener) {
+                oldFrame.contentWindow.removeEventListener('mousemove', mouseMoveListener);
+            }
+            if (clickListener) {
+                oldFrame.contentWindow.removeEventListener('click', clickListener);
+            }
+            if (scrollListener) {
+                oldFrame.contentWindow.removeEventListener('scroll', scrollListener);
+            }
 
-        // Wait for both iframes to load
-        let framesLoaded = 0;
-        const init = () => {
-            framesLoaded++;
-            if (framesLoaded !== 2) return;
-
-            // Get the bounding rectangles of both frames
-            recalculatePositions();
-
-            // Sync mouse and clicks from OLD to NEW
-            oldFrame.contentWindow.addEventListener('mousemove', (e) => {
+            // Define new listeners
+            mouseMoveListener = (e) => {
                 if (!isSyncEnabled) return;
-
-                // Calculate mouse position relative to NEW iframe
                 const x = e.clientX - oldRect.left;
                 const y = e.clientY - oldRect.top;
 
-                // Dispatch the event in the NEW iframe
                 const newDoc = newFrame.contentDocument;
                 const element = newDoc.elementFromPoint(x, y);
                 if (element) {
-                    element.dispatchEvent(new MouseEvent('mousemove', {
-                        clientX: x,
-                        clientY: y
-                    }));
+                    element.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y }));
                 }
 
-                // Update fake mouse position
                 const newX = newRect.left + x;
                 const newY = newRect.top + y;
                 fakeMouse.style.left = `${newX}px`;
                 fakeMouse.style.top = `${newY}px`;
-                fakeMouse.style.display = 'block'; // Show the fake mouse
-            });
+                fakeMouse.style.display = 'block';
+            };
 
-            oldFrame.contentWindow.addEventListener('click', (e) => {
+            clickListener = (e) => {
                 if (!isSyncEnabled) return;
-
-                // Calculate click position relative to NEW iframe
                 const x = e.clientX - oldRect.left;
                 const y = e.clientY - oldRect.top;
 
-                // Dispatch the click in the NEW iframe
                 const newDoc = newFrame.contentDocument;
                 const element = newDoc.elementFromPoint(x, y);
-                console.log("sending click to", element);
-                if (element) {
-                    element.click(); // Trigger the click action
-                } else {
-                    console.log("did not find element");
-                }
-            }, true);
+                if (element) element.click();
+            };
+
+            scrollListener = (e) => {
+                if (!isSyncEnabled) return;
+                newFrame.contentWindow.scrollTo(
+                    oldFrame.contentWindow.scrollX,
+                    oldFrame.contentWindow.scrollY
+                );
+            };
+
+            // Add new listeners
+            oldFrame.contentWindow.addEventListener('mousemove', mouseMoveListener);
+            oldFrame.contentWindow.addEventListener('click', clickListener, true);
+            oldFrame.contentWindow.addEventListener('scroll', scrollListener);
         };
 
-        // Toggle sync on button click
+        // Function to initialize
+        const init = () => {
+            recalculatePositions();
+            setupListeners();
+        };
+
+        // Handle refresh
+        const refreshIframes = () => {
+            // Get the current URLs of the iframes
+            const oldUrl = oldFrame.contentWindow.location.href;
+            const newUrl = newFrame.contentWindow.location.href;
+
+            // Reload both iframes to their current URLs
+            oldFrame.src = oldFrame.src;
+            newFrame.src = newFrame.src;
+            oldFrame.src = oldUrl;
+            newFrame.src = newUrl;
+
+            // Reinitialize after reload
+            let reloadCount = 0;
+            const handleReload = () => {
+                if (++reloadCount === 2) {
+                    init();
+                    // Reattach the sync toggle state
+                    fakeMouse.style.display = isSyncEnabled ? 'block' : 'none';
+                }
+            };
+
+            oldFrame.onload = handleReload;
+            newFrame.onload = handleReload;
+        };
+
+        // Initial setup
+        window.addEventListener('resize', recalculatePositions);
+        refreshButton.addEventListener('click', refreshIframes);
         syncToggle.addEventListener('click', () => {
             isSyncEnabled = !isSyncEnabled;
             syncToggle.textContent = isSyncEnabled ? 'Sync: On' : 'Sync: Off';
-            fakeMouse.style.display = isSyncEnabled ? 'block' : 'none'; // Show/hide fake mouse
+            fakeMouse.style.display = isSyncEnabled ? 'block' : 'none';
         });
 
-        oldFrame.onload = init;
-        newFrame.onload = init;
+        // Initial load
+        let initialLoadCount = 0;
+        const handleInitialLoad = () => {
+            if (++initialLoadCount === 2) init();
+        };
+        oldFrame.onload = handleInitialLoad;
+        newFrame.onload = handleInitialLoad;
     </script>
 </body>
 
