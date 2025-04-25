@@ -6,8 +6,8 @@ const fakeMouse = document.getElementById('fake-mouse');
 
 // Get URL parameters
 const params = new URLSearchParams(window.location.search);
-const oldDefault = params.get('old') || 'http://tickntrip-preprod.amiltone.com'
-const newDefault = params.get('new') || 'http://tickntrip-staging.amiltone.com'
+const oldDefault = params.get('old') || 'https://app.tickntrip.com'
+const newDefault = params.get('new') || 'https://tickntrip-preprod.amiltone.com'
 
 // Set iframe sources from parameters
 oldFrame.src = oldDefault;
