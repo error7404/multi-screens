@@ -94,12 +94,9 @@
     <button id="refresh-button">Refresh</button>
     <button id="sync-toggle">Sync: On</button>
     <div class="container">
-        <!-- <iframe id="old" src="http://tickntrip-dev.amiltone.com"></iframe> -->
-        <iframe id="old" src="http://localhost:3000"></iframe>
+        <iframe id="old"></iframe>
         <div class="divider"></div>
-        <iframe id="new" src="http://tickntrip-dev.amiltone.com"></iframe>
-        <!-- <iframe id="new" src="http://tickntrip-staging.amiltone.com"></iframe> -->
-        <!-- <iframe id="new" src="http://localhost:3000"></iframe> -->
+        <iframe id="new"></iframe>
     </div>
 
     <!-- Fake mouse cursor -->
@@ -112,7 +109,15 @@
         const refreshButton = document.getElementById('refresh-button');
         const fakeMouse = document.getElementById('fake-mouse');
 
-        // Variable to track sync state
+        // Get URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const oldDefault = params.get('old') || 'http://tickntrip-preprod.amiltone.com'
+        const newDefault = params.get('new') || 'http://tickntrip-staging.amiltone.com'
+
+        // Set iframe sources from parameters
+        oldFrame.src = oldDefault;
+        newFrame.src = newDefault;
+
         let isSyncEnabled = true;
         let oldRect, newRect;
 
@@ -163,10 +168,14 @@
                 if (!isSyncEnabled) return;
                 const x = e.clientX - oldRect.left;
                 const y = e.clientY - oldRect.top;
-
                 const newDoc = newFrame.contentDocument;
                 const element = newDoc.elementFromPoint(x, y);
-                if (element) element.click();
+
+                if (element) {
+                    const event = document.createEvent("MouseEvent");
+                    event.initMouseEvent("click", true, true, window, null, x, y, 0, 0, false, false, false, false, 0, null);
+                    element.dispatchEvent(event);
+                }
             };
 
             scrollListener = (e) => {
@@ -181,6 +190,7 @@
             oldFrame.contentWindow.addEventListener('mousemove', mouseMoveListener);
             oldFrame.contentWindow.addEventListener('click', clickListener, true);
             oldFrame.contentWindow.addEventListener('scroll', scrollListener);
+            oldFrame.contentWindow.addEventListener('visibilitychange', () => setTimeout(() => init(), 0));
         };
 
         // Function to initialize
@@ -191,22 +201,21 @@
 
         // Handle refresh
         const refreshIframes = () => {
+            fakeMouse.style.display = 'none';
             // Get the current URLs of the iframes
             const oldUrl = oldFrame.contentWindow.location.href;
             const newUrl = newFrame.contentWindow.location.href;
 
             // Reload both iframes to their current URLs
-            oldFrame.src = oldFrame.src;
-            newFrame.src = newFrame.src;
-            oldFrame.src = oldUrl;
-            newFrame.src = newUrl;
+            oldFrame.src = "";
+            newFrame.src = "";
+            oldFrame.src = oldUrl === "about:blank" ? oldDefault : oldUrl;
+            newFrame.src = newUrl === "about:blank" ? newDefault : newUrl;
 
             // Reinitialize after reload
             let reloadCount = 0;
             const handleReload = () => {
                 if (++reloadCount === 2) {
-                    init();
-                    // Reattach the sync toggle state
                     fakeMouse.style.display = isSyncEnabled ? 'block' : 'none';
                 }
             };
@@ -215,22 +224,22 @@
             newFrame.onload = handleReload;
         };
 
-        // Initial setup
-        window.addEventListener('resize', recalculatePositions);
+        // Initial load handlers
+        let initialLoadCount = 0;
+        const handleInitialLoad = () => {
+            if (++initialLoadCount === 2) init();
+        };
+
+        oldFrame.onload = handleInitialLoad;
+        newFrame.onload = handleInitialLoad;
+
+        document.addEventListener('resize', recalculatePositions);
         refreshButton.addEventListener('click', refreshIframes);
         syncToggle.addEventListener('click', () => {
             isSyncEnabled = !isSyncEnabled;
             syncToggle.textContent = isSyncEnabled ? 'Sync: On' : 'Sync: Off';
             fakeMouse.style.display = isSyncEnabled ? 'block' : 'none';
         });
-
-        // Initial load
-        let initialLoadCount = 0;
-        const handleInitialLoad = () => {
-            if (++initialLoadCount === 2) init();
-        };
-        oldFrame.onload = handleInitialLoad;
-        newFrame.onload = handleInitialLoad;
     </script>
 </body>
 
