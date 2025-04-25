@@ -1,0 +1,81 @@
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+iframe {
+    width: 50%;
+    height: 100%;
+    border: none;
+}
+
+/* Divider between iframes */
+.divider {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #ccc;
+    z-index: 100;
+}
+
+#sync-toggle {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+#sync-toggle:active {
+    background-color: #0056b3;
+}
+
+/* Fake mouse cursor */
+#fake-mouse {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: red;
+    border: 1.5px black solid;
+    border-radius: 50%;
+    pointer-events: none;
+    /* Ensure it doesn't interfere with clicks */
+    z-index: 9999;
+    display: none;
+    /* Hidden by default */
+}
+
+/* Refresh button */
+#refresh-button {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+#refresh-button:active {
+    background-color: #218838;
+}
